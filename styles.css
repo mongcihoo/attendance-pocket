@@ -7,8 +7,8 @@
 
 /* iOS 表单：16px 可避免 Safari 聚焦自动放大；min-width 防止网格子项溢出。 */
 input,select,textarea{min-width:0;font-size:16px;line-height:1.25}
-.form-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.form-grid>*{min-width:0}
+.form-grid,.filter-panel{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.form-grid>*,.filter-panel>*{min-width:0}
 fieldset{min-width:0}
 .period-segmented{grid-template-columns:repeat(3,minmax(0,1fr))}
 .period-segmented span{padding-left:5px;padding-right:5px}
@@ -22,4 +22,8 @@ fieldset{min-width:0}
 .person-choice input:focus-visible+span{outline:2px solid #879a93;outline-offset:2px}
 .field-hint{margin:7px 1px 0;color:var(--muted);font-size:11px;line-height:1.45}
 .error{line-height:1.5}
-@media(max-width:400px){.form-grid{grid-template-columns:1fr}}
+.date-picker-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.date-picker-row>*{min-width:0}.date-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.date-chips>span{display:flex;align-items:center;gap:5px;padding:7px 9px;border-radius:99px;background:#eef2f0;color:#4b5d56;font-size:12px}.date-chips button{border:0;background:transparent;color:#76817d;padding:0 2px;font-size:17px;line-height:1}
+.autocomplete-field{position:relative}.suggestions{position:absolute;z-index:5;top:calc(100% + 4px);left:0;right:0;max-height:190px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(30,40,36,.14);padding:5px}.suggestions div{padding:11px 12px;border-radius:9px;color:#3f4945;font-size:14px}.suggestions div:active{background:#eef2f0}
+.calendar-detail-heading{margin-top:19px}.place-stat{border-top:1px solid var(--line)}.place-stat:first-child{border-top:0}.place-stat summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px;cursor:pointer}.place-stat summary::-webkit-details-marker{display:none}.place-stat summary span{min-width:0}.place-stat summary strong,.place-stat summary small{display:block}.place-stat summary strong{font-size:14px}.place-stat summary small{color:var(--muted);font-size:11px;margin-top:4px}.place-stat summary>i{font-style:normal;color:var(--muted);font-size:11px}.place-stat[open] summary>i{font-size:0}.place-stat[open] summary>i::after{content:'收起';font-size:11px}.place-details{padding:0 0 8px}.place-details button{width:100%;border:0;border-radius:10px;background:#f7f8f6;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:10px;margin-bottom:6px}.place-details button>span{font-size:12px;color:#59635f;white-space:nowrap}.place-details strong,.place-details small{display:block}.place-details small{color:var(--muted);margin-top:3px}.record-card{grid-template-columns:38px minmax(0,1fr) auto}.record-meta{min-width:0}.stats-filters>*{min-width:0}
+@media(max-width:520px){.form-grid,.filter-panel{grid-template-columns:1fr}.stats-filters label,.stats-filters label:first-child,.stats-filters label:nth-child(4),.stats-filters label:nth-child(5),.filter-panel button{grid-column:1}.date-picker-row{grid-template-columns:minmax(0,1fr) auto}}
+@media(max-width:360px){.date-picker-row{grid-template-columns:1fr}.dialog-actions{grid-template-columns:1fr 1fr}.dialog-actions>span{display:none}.dialog-actions .danger{grid-column:1/-1}}

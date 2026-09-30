@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <div id="app">
@@ -57,6 +57,7 @@
           <div id="calendarGrid" class="calendar-grid"></div>
         </div>
         <div class="legend"><span><i class="dot am"></i>上午</span><span><i class="dot pm"></i>下午</span></div>
+        <div class="section-heading calendar-detail-heading"><div><h2 id="calendarDayTitle">当日明细</h2><p>显示当天全部人员记录</p></div></div>
         <div id="calendarDayRecords" class="record-list"></div>
       </section>
 
@@ -70,7 +71,7 @@
           <button id="resetStats" class="secondary" type="button">恢复本月</button>
         </div>
         <div id="statCards" class="stat-grid"></div>
-        <div class="card breakdown"><div class="section-heading"><h2>地点统计</h2></div><div id="placeStats"></div></div>
+        <div class="card breakdown"><div class="section-heading"><div><h2>地点统计</h2><p>点击地点查看日期和人员明细</p></div></div><div id="placeStats"></div></div>
         <div class="card breakdown"><div class="section-heading"><h2>工作内容统计</h2></div><div id="taskStats"></div></div>
       </section>
 
@@ -118,16 +119,14 @@
       <div class="dialog-header"><div><p class="eyebrow">考勤记录</p><h2 id="recordDialogTitle">新增记录</h2></div><button id="closeRecord" class="icon-button" type="button" aria-label="关闭">×</button></div>
       <input id="recordId" type="hidden">
       <fieldset id="recordPeopleFieldset"><legend>人员（可多选）</legend><div id="recordPeople" class="person-multi" role="group" aria-label="选择人员"></div><p id="personSelectionHint" class="field-hint"></p></fieldset>
-      <label>工作日期<input id="recordDate" type="date" required></label>
+      <fieldset id="recordDatesFieldset"><legend>工作日期（可多选）</legend><div class="date-picker-row"><input id="recordDate" type="date" required><button id="addRecordDate" class="secondary" type="button">添加日期</button></div><div id="recordDates" class="date-chips" aria-live="polite"></div><p id="dateSelectionHint" class="field-hint"></p></fieldset>
       <fieldset><legend>时段</legend><div class="segmented period-segmented"><label><input name="period" type="radio" value="am" checked><span><i class="dot am"></i>上午</span></label><label><input name="period" type="radio" value="pm"><span><i class="dot pm"></i>下午</span></label><label><input name="period" type="radio" value="full"><span><i class="full-dots"><i class="dot am"></i><i class="dot pm"></i></i>全天</span></label></div></fieldset>
       <div class="form-grid time-hours-grid">
         <label>打卡时间<input id="recordTime" type="time" required></label>
         <label>实际工时<input id="recordHours" type="number" min="0" max="24" step="0.25" inputmode="decimal" placeholder="如 4" required></label>
       </div>
-      <label>工作地点<input id="recordPlace" list="placeOptions" maxlength="80" placeholder="输入或选择历史地点" autocomplete="off" required></label>
-      <datalist id="placeOptions"></datalist>
-      <label>工作内容<input id="recordTask" list="taskOptions" maxlength="120" placeholder="输入或选择历史内容" autocomplete="off" required></label>
-      <datalist id="taskOptions"></datalist>
+      <label class="autocomplete-field"><span>工作地点</span><input id="recordPlace" maxlength="80" placeholder="输入或选择历史地点" autocomplete="off" required><div id="placeSuggestions" class="suggestions hidden" role="listbox"></div></label>
+      <label class="autocomplete-field"><span>工作内容</span><input id="recordTask" maxlength="120" placeholder="输入或选择历史内容" autocomplete="off" required><div id="taskSuggestions" class="suggestions hidden" role="listbox"></div></label>
       <label>备注（可选）<textarea id="recordNotes" maxlength="500" rows="3" placeholder="补充说明"></textarea></label>
       <p id="recordError" class="error" role="alert"></p>
       <div class="dialog-actions"><button id="deleteRecord" class="danger hidden" type="button">删除</button><span></span><button id="cancelRecord" class="secondary" type="button">取消</button><button class="primary" type="submit">保存</button></div>
@@ -148,6 +147,6 @@
     <span>新版本已准备好</span>
     <button id="applyUpdate" type="button">立即刷新</button>
   </aside>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

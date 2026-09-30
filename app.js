@@ -2,7 +2,7 @@
 
 const DB_NAME = 'attendance-pocket-db';
 const DB_VERSION = 1;
-const APP_VERSION = '1.2.0-pwa.8';
+const APP_VERSION = '1.3.0-pwa.9';
 const STORES = ['people', 'places', 'tasks', 'records', 'meta'];
 let db;
 let state = { people: [], places: [], tasks: [], records: [], activePersonId: '', month: new Date(), selectedDate: localDate(new Date()) };
@@ -10,6 +10,7 @@ let textAction = null;
 let serviceWorkerRegistration = null;
 let waitingServiceWorker = null;
 let reloadingForUpdate = false;
+let selectedRecordDates = [];
 
 const $ = id => document.getElementById(id);
 const uid = prefix => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -67,7 +68,6 @@ function filteredRecords(personId=state.activePersonId,start='',end=''){ return 
 
 function renderAll(){
   $('activePerson').innerHTML=personOptions(false,state.activePersonId); $('statsPerson').innerHTML=personOptions(true,$('statsPerson').value);
-  $('placeOptions').innerHTML=state.places.map(x=>`<option value="${escapeHtml(x.name)}"></option>`).join(''); $('taskOptions').innerHTML=state.tasks.map(x=>`<option value="${escapeHtml(x.name)}"></option>`).join('');
   $('statsPlace').innerHTML=vocabOptions(state.places,true,$('statsPlace').value); $('statsTask').innerHTML=vocabOptions(state.tasks,true,$('statsTask').value);
   renderRecords(); renderCalendar(); renderStats(); renderSettings();
 }
@@ -85,10 +85,10 @@ function renderRecordCards(container,records,showDate){
 
 function renderCalendar(){
   const month=state.month,y=month.getFullYear(),m=month.getMonth(),first=new Date(y,m,1),start=new Date(y,m,1-((first.getDay()+6)%7));
-  $('monthTitle').textContent=`${y}年${m+1}月`; const [from,to]=monthRange(month); const monthRecords=filteredRecords(state.activePersonId,from,to); const days=new Set(monthRecords.map(r=>r.date)); $('monthSummary').textContent=`${days.size} 个出勤日 · ${monthRecords.reduce((s,r)=>s+Number(r.hours||0),0).toFixed(1)} 小时`;
-  $('calendarGrid').innerHTML=Array.from({length:42},(_,i)=>{ const d=new Date(start);d.setDate(start.getDate()+i);const key=localDate(d),rs=state.records.filter(r=>r.personId===state.activePersonId&&r.date===key);return `<button class="calendar-day ${d.getMonth()!==m?'outside':''} ${key===localDate(new Date())?'today':''} ${key===state.selectedDate?'selected':''}" data-date="${key}" type="button"><span>${d.getDate()}</span><span class="day-dots">${rs.some(r=>coversPeriod(r.period,'am'))?'<i class="dot am"></i>':'<i></i>'}${rs.some(r=>coversPeriod(r.period,'pm'))?'<i class="dot pm"></i>':''}</span></button>`;}).join('');
+  $('monthTitle').textContent=`${y}年${m+1}月`; const [from,to]=monthRange(month); const monthRecords=filteredRecords('',from,to); const days=new Set(monthRecords.map(r=>r.date)); $('monthSummary').textContent=`${days.size} 个有记录日期 · ${monthRecords.length} 条记录`;
+  $('calendarGrid').innerHTML=Array.from({length:42},(_,i)=>{ const d=new Date(start);d.setDate(start.getDate()+i);const key=localDate(d),rs=state.records.filter(r=>r.date===key);return `<button class="calendar-day ${d.getMonth()!==m?'outside':''} ${key===localDate(new Date())?'today':''} ${key===state.selectedDate?'selected':''}" data-date="${key}" type="button"><span>${d.getDate()}</span><span class="day-dots">${rs.some(r=>coversPeriod(r.period,'am'))?'<i class="dot am"></i>':'<i></i>'}${rs.some(r=>coversPeriod(r.period,'pm'))?'<i class="dot pm"></i>':''}</span></button>`;}).join('');
   $('calendarGrid').querySelectorAll('[data-date]').forEach(button=>button.addEventListener('click',()=>{state.selectedDate=button.dataset.date;state.month=parseDate(state.selectedDate);renderCalendar();}));
-  const selected=filteredRecords(state.activePersonId,state.selectedDate,state.selectedDate); renderRecordCards($('calendarDayRecords'),selected,true);
+  const selected=filteredRecords('',state.selectedDate,state.selectedDate); $('calendarDayTitle').textContent=`${formatDate(state.selectedDate)} · ${selected.length} 条`; renderRecordCards($('calendarDayRecords'),selected,false);
 }
 
 function renderStats(){
@@ -96,7 +96,12 @@ function renderStats(){
   const records=state.records.filter(r=>(!person||r.personId===person)&&(!start||r.date>=start)&&(!end||r.date<=end)&&(!place||r.placeId===place)&&(!task||r.taskId===task));
   const days=new Set(records.map(r=>`${r.personId}:${r.date}`)).size,hours=records.reduce((sum,r)=>sum+Number(r.hours||0),0);
   $('statCards').innerHTML=[['出勤天数',days,'天'],['记录次数',records.length,'次'],['总工时',hours.toFixed(1),'小时']].map(([label,value,unit])=>`<div class="card stat-card"><strong>${value}</strong><small>${label} · ${unit}</small></div>`).join('');
-  renderBreakdown($('placeStats'),records,state.places,'placeId'); renderBreakdown($('taskStats'),records,state.tasks,'taskId');
+  renderPlaceBreakdown($('placeStats'),records); renderBreakdown($('taskStats'),records,state.tasks,'taskId');
+}
+function renderPlaceBreakdown(container,records){
+  const rows=state.places.map(item=>{const list=records.filter(r=>r.placeId===item.id).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));return {item,list,days:new Set(list.map(r=>`${r.personId}:${r.date}`)).size,hours:list.reduce((s,r)=>s+Number(r.hours||0),0)}}).filter(x=>x.list.length).sort((a,b)=>b.hours-a.hours);
+  container.innerHTML=rows.length?rows.map(({item,list,days,hours})=>`<details class="place-stat"><summary><span><strong>${escapeHtml(item.name)}</strong><small>${days} 个出勤日 · ${list.length} 次 · ${hours.toFixed(1)} 小时</small></span><i>展开</i></summary><div class="place-details">${list.map(r=>`<button type="button" data-record="${r.id}"><span><strong>${formatDate(r.date)}</strong><small>${escapeHtml(byId(state.people,r.personId)?.name||'未知人员')}</small></span><span>${periodDots(r.period)}${periodLabel(r.period)} · ${Number(r.hours).toFixed(2).replace(/\.00$/,'')}h</span></button>`).join('')}</div></details>`).join(''):'<div class="empty">当前条件下暂无数据</div>';
+  container.querySelectorAll('[data-record]').forEach(button=>button.onclick=()=>openRecord(button.dataset.record));
 }
 function renderBreakdown(container,records,items,key){
   const rows=items.map(item=>{const list=records.filter(r=>r[key]===item.id);return {name:item.name,count:list.length,hours:list.reduce((s,r)=>s+Number(r.hours||0),0)}}).filter(x=>x.count).sort((a,b)=>b.hours-a.hours); const max=Math.max(...rows.map(x=>x.hours),1);
@@ -122,21 +127,38 @@ function openRecord(id=''){
   const selectedPersonId=record?.personId||state.activePersonId;
   $('recordPeople').innerHTML=state.people.map(person=>`<label class="person-choice"><input type="checkbox" name="recordPerson" value="${person.id}" ${person.id===selectedPersonId?'checked':''} ${record&&person.id!==selectedPersonId?'disabled':''}><span>${escapeHtml(person.name)}</span></label>`).join('');
   $('personSelectionHint').textContent=record?'编辑已有记录时只修改这一人的记录。':'可同时选择多人，保存后会分别生成独立记录。';
-  $('recordDate').value=record?.date||state.selectedDate||localDate(now); $('recordTime').value=record?.time||localTime(now); $('recordHours').value=record?.hours??4; $('recordPlace').value=byId(state.places,record?.placeId)?.name||''; $('recordTask').value=byId(state.tasks,record?.taskId)?.name||''; $('recordNotes').value=record?.notes||'';
+  selectedRecordDates=[record?.date||localDate(now)]; $('recordDate').value=selectedRecordDates[0]; $('recordDate').disabled=Boolean(record); $('addRecordDate').classList.toggle('hidden',Boolean(record)); $('dateSelectionHint').textContent=record?'编辑记录时日期保持单选。':'默认已选择今天，可继续添加其他日期。'; renderSelectedDates();
+  $('recordTime').value=record?.time||localTime(now); $('recordHours').value=record?.hours??4; $('recordPlace').value=byId(state.places,record?.placeId)?.name||''; $('recordTask').value=byId(state.tasks,record?.taskId)?.name||''; $('recordNotes').value=record?.notes||'';
   document.querySelector(`input[name="period"][value="${record?.period||(now.getHours()<13?'am':'pm')}"]`).checked=true; $('recordDialog').showModal();
+}
+function renderSelectedDates(){
+  $('recordDates').innerHTML=selectedRecordDates.sort().map(date=>`<span>${formatDate(date,false)}${$('recordId').value?'':`<button type="button" data-remove-date="${date}" aria-label="移除 ${date}">×</button>`}</span>`).join('');
+  $('recordDates').querySelectorAll('[data-remove-date]').forEach(button=>button.onclick=()=>{selectedRecordDates=selectedRecordDates.filter(date=>date!==button.dataset.removeDate);renderSelectedDates();});
+}
+function addSelectedDate(){ const date=$('recordDate').value;if(!date)return;if(!selectedRecordDates.includes(date))selectedRecordDates.push(date);renderSelectedDates();$('recordError').textContent=''; }
+function showSuggestions(kind){
+  const input=$(kind==='place'?'recordPlace':'recordTask'),container=$(kind==='place'?'placeSuggestions':'taskSuggestions'),items=kind==='place'?state.places:state.tasks,query=normalizeName(input.value).toLocaleLowerCase('zh-CN');
+  const matches=items.filter(item=>!query||item.name.toLocaleLowerCase('zh-CN').includes(query)||(item.aliases||[]).some(alias=>alias.toLocaleLowerCase('zh-CN').includes(query))).sort((a,b)=>a.name.localeCompare(b.name,'zh-CN')).slice(0,12);
+  container.innerHTML=matches.map(item=>`<div role="option" data-suggestion="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>`).join('');container.classList.toggle('hidden',!matches.length);
+}
+function bindSuggestions(kind){
+  const input=$(kind==='place'?'recordPlace':'recordTask'),container=$(kind==='place'?'placeSuggestions':'taskSuggestions');
+  input.addEventListener('focus',()=>showSuggestions(kind));input.addEventListener('input',()=>showSuggestions(kind));input.addEventListener('blur',()=>setTimeout(()=>container.classList.add('hidden'),120));
+  container.addEventListener('pointerdown',event=>{const option=event.target.closest('[data-suggestion]');if(!option)return;event.preventDefault();input.value=option.dataset.suggestion;container.classList.add('hidden');input.focus();});
 }
 async function ensureVocab(storeName,name){
   const list=storeName==='places'?state.places:state.tasks,clean=normalizeName(name),existing=list.find(x=>x.name.localeCompare(clean,undefined,{sensitivity:'base'})===0 || (x.aliases||[]).some(a=>a.localeCompare(clean,undefined,{sensitivity:'base'})===0));
   if(existing)return existing; const item={id:uid(storeName==='places'?'place':'task'),name:clean,aliases:[],createdAt:new Date().toISOString()}; await put(storeName,item); list.push(item); return item;
 }
 async function saveRecord(){
-  const id=$('recordId').value,date=$('recordDate').value,period=document.querySelector('input[name="period"]:checked').value,personIds=[...document.querySelectorAll('input[name="recordPerson"]:checked')].map(input=>input.value);
+  const id=$('recordId').value,period=document.querySelector('input[name="period"]:checked').value,personIds=[...document.querySelectorAll('input[name="recordPerson"]:checked')].map(input=>input.value); if(!id)addSelectedDate(); const dates=id?[byId(state.records,id)?.date]:[...new Set(selectedRecordDates)];
   if(!personIds.length){$('recordError').textContent='请至少选择 1 名人员。';return;}
-  const conflicts=personIds.map(personId=>({person:byId(state.people,personId),records:state.records.filter(r=>r.personId===personId&&r.date===date&&r.id!==id&&(period==='full'||r.period==='full'||r.period===period))})).filter(item=>item.records.length);
-  if(conflicts.length){$('recordError').textContent=conflicts.map(({person,records})=>`${person?.name||'该人员'}：${period==='full'?`当天已有${records.map(r=>periodLabel(r.period)).join('、')}记录，不能新增全天`:`当天已有${records.some(r=>r.period==='full')?'全天':periodLabel(period)}记录`}`).join('；');return;}
+  if(!dates.length){$('recordError').textContent='请至少选择 1 个工作日期。';return;}
+  const conflicts=[];for(const personId of personIds)for(const date of dates){const found=state.records.filter(r=>r.personId===personId&&r.date===date&&r.id!==id&&(period==='full'||r.period==='full'||r.period===period));if(found.length)conflicts.push({person:byId(state.people,personId),date,records:found});}
+  if(conflicts.length){$('recordError').textContent=conflicts.map(({person,date,records})=>`${person?.name||'该人员'} ${date}：${period==='full'?`已有${records.map(r=>periodLabel(r.period)).join('、')}，不能新增全天`:`已有${records.some(r=>r.period==='full')?'全天':periodLabel(period)}记录`}`).join('；');return;}
   if(!$('recordPlace').value.trim()||!$('recordTask').value.trim()){ $('recordError').textContent='请填写工作地点和工作内容。'; return; }
   const place=await ensureVocab('places',$('recordPlace').value),task=await ensureVocab('tasks',$('recordTask').value),existing=id?byId(state.records,id):null,now=new Date().toISOString();
-  const records=personIds.map(personId=>({id:id||uid('record'),personId,date,period,time:$('recordTime').value,hours:Number($('recordHours').value),placeId:place.id,taskId:task.id,notes:$('recordNotes').value.trim(),createdAt:existing?.createdAt||now,updatedAt:now})); await putMany('records',records); await loadState(); $('recordDialog').close(); renderAll(); toast(existing?'记录已更新':`${records.length} 条记录已保存`);
+  const records=[];for(const personId of personIds)for(const date of dates)records.push({id:id||uid('record'),personId,date,period,time:$('recordTime').value,hours:Number($('recordHours').value),placeId:place.id,taskId:task.id,notes:$('recordNotes').value.trim(),createdAt:existing?.createdAt||now,updatedAt:now}); await putMany('records',records); await loadState(); $('recordDialog').close(); renderAll(); toast(existing?'记录已更新':`${records.length} 条记录已保存`);
 }
 async function deleteCurrentRecord(){ const id=$('recordId').value;if(!id||!confirm('确定删除这条记录？此操作无法撤销。'))return;await remove('records',id);await loadState();$('recordDialog').close();renderAll();toast('记录已删除'); }
 
@@ -167,6 +189,7 @@ function bindEvents(){
   $('prevMonth').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);state.selectedDate=localDate(state.month);renderCalendar();}; $('nextMonth').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);state.selectedDate=localDate(state.month);renderCalendar();};
   ['statsPerson','statsStart','statsEnd','statsPlace','statsTask'].forEach(id=>$(id).onchange=renderStats); $('resetStats').onclick=()=>{const [a,b]=monthRange(new Date());$('statsStart').value=a;$('statsEnd').value=b;$('statsPerson').value='';$('statsPlace').value='';$('statsTask').value='';renderStats();};
   $('recordForm').onsubmit=e=>{e.preventDefault();saveRecord();}; $('closeRecord').onclick=$('cancelRecord').onclick=()=>$('recordDialog').close(); $('deleteRecord').onclick=deleteCurrentRecord;
+  $('addRecordDate').onclick=addSelectedDate; $('recordDate').onchange=()=>{$('recordError').textContent='';}; bindSuggestions('place');bindSuggestions('task');
   document.querySelectorAll('input[name="period"]').forEach(input=>input.onchange=()=>{$('recordError').textContent='';}); $('recordPeople').onchange=()=>{$('recordError').textContent='';};
   $('textForm').onsubmit=async e=>{e.preventDefault();const value=normalizeName($('textInput').value);if(!value){$('textError').textContent='名称不能为空';return;}const action=textAction;$('textDialog').close();textAction=null;await action(value);}; $('closeText').onclick=$('cancelText').onclick=()=>$('textDialog').close();
   $('addPerson').onclick=()=>addNamed('person');$('addPlace').onclick=()=>addNamed('place');$('addTask').onclick=()=>addNamed('task');$('exportJson').onclick=()=>exportJSON().catch(error=>alert(`导出失败：${error.message}`));$('exportCsv').onclick=()=>exportCSV().catch(error=>alert(`导出失败：${error.message}`));$('importJson').onchange=e=>e.target.files[0]&&importJSON(e.target.files[0]);
