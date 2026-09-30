@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <div id="app">
@@ -115,14 +115,12 @@
 
   <dialog id="recordDialog">
     <form id="recordForm" method="dialog">
-      <div class="dialog-header"><div><p class="eyebrow">半天记录</p><h2 id="recordDialogTitle">新增记录</h2></div><button id="closeRecord" class="icon-button" type="button" aria-label="关闭">×</button></div>
+      <div class="dialog-header"><div><p class="eyebrow">考勤记录</p><h2 id="recordDialogTitle">新增记录</h2></div><button id="closeRecord" class="icon-button" type="button" aria-label="关闭">×</button></div>
       <input id="recordId" type="hidden">
-      <div class="form-grid">
-        <label>人员<select id="recordPerson" required></select></label>
-        <label>工作日期<input id="recordDate" type="date" required></label>
-      </div>
-      <fieldset><legend>时段</legend><div class="segmented"><label><input name="period" type="radio" value="am" checked><span><i class="dot am"></i>上午</span></label><label><input name="period" type="radio" value="pm"><span><i class="dot pm"></i>下午</span></label></div></fieldset>
-      <div class="form-grid">
+      <fieldset id="recordPeopleFieldset"><legend>人员（可多选）</legend><div id="recordPeople" class="person-multi" role="group" aria-label="选择人员"></div><p id="personSelectionHint" class="field-hint"></p></fieldset>
+      <label>工作日期<input id="recordDate" type="date" required></label>
+      <fieldset><legend>时段</legend><div class="segmented period-segmented"><label><input name="period" type="radio" value="am" checked><span><i class="dot am"></i>上午</span></label><label><input name="period" type="radio" value="pm"><span><i class="dot pm"></i>下午</span></label><label><input name="period" type="radio" value="full"><span><i class="full-dots"><i class="dot am"></i><i class="dot pm"></i></i>全天</span></label></div></fieldset>
+      <div class="form-grid time-hours-grid">
         <label>打卡时间<input id="recordTime" type="time" required></label>
         <label>实际工时<input id="recordHours" type="number" min="0" max="24" step="0.25" inputmode="decimal" placeholder="如 4" required></label>
       </div>
@@ -150,6 +148,6 @@
     <span>新版本已准备好</span>
     <button id="applyUpdate" type="button">立即刷新</button>
   </aside>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
